@@ -1,0 +1,8 @@
+node_modules
+.next
+.env*.local
+*.tsbuildinfo
+.git
+README.md
+Dockerfile
+compose.yaml

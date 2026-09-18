@@ -1,0 +1,77 @@
+name: kairo-panel
+
+# Các bản chạy từ CÙNG một ảnh kairo-panel-next:latest, khác nhau đúng ở bộ env.
+# Env của app được đọc lúc CHẠY (src/server/kairo.ts — kairoEnv() gọi mỗi request,
+# các route /api/* đều force-dynamic) và KHÔNG có biến NEXT_PUBLIC_* nào, nên đổi
+# env chỉ cần restart container, không phải build lại ảnh.
+#
+# Hệ quả cần giữ: đừng bao giờ thêm biến NEXT_PUBLIC_* vào app này. Biến đó bị
+# nướng cứng vào bundle lúc `next build`, hai container dùng chung ảnh sẽ dùng
+# chung giá trị — và nó sai lặng lẽ chứ không báo lỗi.
+#
+# [2026-09-16] Tạm thời CHỈ CHẠY MỘT service `kairo-panel`, ở cổng 3100 để nginx
+# :8765 (cổng duy nhất router forward ra ngoài) giữ nguyên đường đi. Env nào đang
+# chạy thì xem dòng `env_file` của service đó — không ghi ở đây để khỏi lệch
+# (bản cũ của dòng này ghi "trỏ env UAT" trong khi service đã chuyển về .env.local).
+# Đổi môi trường: sửa `env_file` (.env.local | .env.sit.local | .env.uat.local)
+# rồi `docker compose up -d --no-build`.
+# Ba khối cũ để lại nguyên văn bên dưới dạng chú thích — bỏ chú thích là chạy lại
+# được, các file .env.* không bị đụng tới.
+x-panel: &panel
+  image: kairo-panel-next:latest
+  restart: unless-stopped
+  logging:
+    driver: json-file
+    options:
+      max-size: "10m"
+      max-file: "3"
+  healthcheck:
+    test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/api/config').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+    interval: 30s
+    timeout: 10s
+    retries: 3
+    start_period: 15s
+
+services:
+  # ĐANG CHẠY — trỏ .env.local (cụm kairos-viper trên máy này, tenant cardoctor).
+  # Giữ cổng 3100 nên nginx :8765 -> 127.0.0.1:3100 không phải sửa.
+  kairo-panel:
+    <<: *panel
+    build: .
+    container_name: kairo-panel
+    env_file:
+      - .env.local
+    ports:
+      - "3100:3000"
+
+  # ----- TẠM DỪNG 2026-09-16 -----------------------------------------------
+  # Trỏ về cụm kairos-viper chạy ngay trên máy này (qua domain tienloixanh.org).
+  # kairo-panel-local:
+  #   <<: *panel
+  #   build: .
+  #   container_name: kairo-panel-local
+  #   env_file:
+  #     - .env.local
+  #   ports:
+  #     - "3100:3000"
+
+  # Trỏ ra môi trường SIT (api.sit.yousee.vn). Không có khối build: dùng lại đúng
+  # ảnh mà service trên đã build, nên `docker compose build` phải chạy trước `up`
+  # ở một máy chưa có ảnh.
+  # kairo-panel-sit:
+  #   <<: *panel
+  #   container_name: kairo-panel-sit
+  #   env_file:
+  #     - .env.sit.local
+  #   ports:
+  #     - "3101:3000"
+
+  # Trỏ ra môi trường UAT ở cổng riêng 3102 (bản song song, nay gộp vào
+  # `kairo-panel` ở trên).
+  # kairo-panel-uat:
+  #   <<: *panel
+  #   container_name: kairo-panel-uat
+  #   env_file:
+  #     - .env.uat.local
+  #   ports:
+  #     - "3102:3000"

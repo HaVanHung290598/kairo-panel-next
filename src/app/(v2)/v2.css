@@ -1,0 +1,511 @@
+/*
+  Vỏ giao diện của PHẦN MỀM DOANH NGHIỆP ở nhánh v2 — cố ý không dùng design system của Kairo:
+  chỉ các khối nhúng là Kairo, và chúng tự mang giao diện riêng trong Shadow DOM.
+
+  Tông sáng (khác nhánh v1 nền tối) để người kiểm thử nhìn là biết đang ở bản nào.
+*/
+
+:root {
+  --v2-bg: #f4f5f7;
+  --v2-surface: #ffffff;
+  --v2-bar: #1d2433;
+  --v2-line: #dfe3ea;
+  --v2-text: #1b2230;
+  --v2-muted: #637085;
+  --v2-accent: #1f6feb;
+  --v2-accent-ink: #ffffff;
+  --v2-warn: #f5b942;
+  --v2-err-bg: #fdecec;
+  --v2-err-fg: #a4262c;
+  --v2-radius: 10px;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  background: var(--v2-bg);
+  color: var(--v2-text);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+a {
+  color: var(--v2-accent);
+}
+
+code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12.5px;
+  background: #eef1f6;
+  border-radius: 4px;
+  padding: 1px 5px;
+  word-break: break-all;
+}
+
+.v2-muted {
+  color: var(--v2-muted);
+}
+
+/* ---------- khung ---------- */
+.v2-app {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.v2-top {
+  background: var(--v2-bar);
+  color: #fff;
+  padding: 10px 20px;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  flex-wrap: wrap;
+}
+
+.v2-brand {
+  color: var(--v2-warn);
+  font-weight: 700;
+  font-size: 16px;
+  text-decoration: none;
+}
+.v2-brand span {
+  color: #c9d1de;
+  font-weight: 500;
+  font-size: 13px;
+}
+
+.v2-nav {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+.v2-nav a {
+  color: #d5dbe6;
+  text-decoration: none;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 13px;
+}
+.v2-nav a:hover {
+  background: #2b3447;
+}
+.v2-nav a[aria-current='page'] {
+  background: #33405a;
+  color: #fff;
+}
+.v2-nav .v2-nav-v1 {
+  color: #9aa6ba;
+  border: 1px dashed #4a5670;
+}
+
+.v2-who {
+  margin-left: auto;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  font-size: 13px;
+}
+.v2-runtime {
+  font-size: 11px;
+  border-radius: 999px;
+  padding: 2px 8px;
+  background: #33405a;
+  color: #d5dbe6;
+}
+.v2-runtime[data-runtime='dev-machine'] {
+  background: var(--v2-warn);
+  color: #1d2433;
+}
+
+.v2-banner {
+  background: var(--v2-err-bg);
+  color: var(--v2-err-fg);
+  padding: 10px 20px;
+  font-size: 13px;
+}
+
+.v2-main {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 16px 20px;
+  gap: 16px;
+  overflow: auto;
+}
+
+/* ---------- thẻ, nút, form ---------- */
+.v2-card {
+  background: var(--v2-surface);
+  border: 1px solid var(--v2-line);
+  border-radius: var(--v2-radius);
+  padding: 18px 20px;
+}
+.v2-card h1 {
+  font-size: 20px;
+  margin-bottom: 8px;
+}
+.v2-card h2 {
+  font-size: 16px;
+  margin-bottom: 6px;
+}
+.v2-card p + p,
+.v2-card p + dl,
+.v2-card dl + p {
+  margin-top: 10px;
+}
+
+.v2-btn {
+  font: inherit;
+  font-size: 13px;
+  border: 1px solid var(--v2-line);
+  background: var(--v2-surface);
+  color: var(--v2-text);
+  border-radius: 8px;
+  padding: 6px 12px;
+  cursor: pointer;
+}
+.v2-btn:hover {
+  border-color: #b9c2d0;
+}
+.v2-btn:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+.v2-btn-primary {
+  background: var(--v2-accent);
+  border-color: var(--v2-accent);
+  color: var(--v2-accent-ink);
+}
+.v2-btn-primary:hover {
+  filter: brightness(1.06);
+}
+
+.v2-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.v2-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.v2-field input,
+.v2-field textarea {
+  font: inherit;
+  font-weight: 400;
+  border: 1px solid var(--v2-line);
+  border-radius: 8px;
+  padding: 8px 10px;
+  background: #fff;
+}
+.v2-field input:focus,
+.v2-field textarea:focus {
+  outline: 2px solid var(--v2-accent);
+  outline-offset: 0;
+  border-color: var(--v2-accent);
+}
+.v2-hint {
+  font-weight: 400;
+  font-size: 12px;
+}
+.v2-field-inline {
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+}
+.v2-field-inline input {
+  width: 80px;
+}
+.v2-check {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  font-size: 13px;
+}
+.v2-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+.v2-error {
+  background: var(--v2-err-bg);
+  color: var(--v2-err-fg);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 13px;
+}
+
+.v2-kv {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 6px 16px;
+  font-size: 13px;
+}
+.v2-kv dt {
+  color: var(--v2-muted);
+}
+.v2-kv dd {
+  margin: 0;
+  min-width: 0;
+}
+
+.v2-seg {
+  display: inline-flex;
+  border: 1px solid var(--v2-line);
+  border-radius: 8px;
+  overflow: hidden;
+  background: #fff;
+}
+.v2-seg button {
+  font: inherit;
+  font-size: 13px;
+  border: 0;
+  background: transparent;
+  padding: 6px 12px;
+  cursor: pointer;
+  color: var(--v2-muted);
+}
+.v2-seg button + button {
+  border-left: 1px solid var(--v2-line);
+}
+.v2-seg button.on {
+  background: #e8f0fe;
+  color: var(--v2-accent);
+  font-weight: 600;
+}
+
+/* ---------- tổng quan ---------- */
+.v2-hub {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-width: 1100px;
+  width: 100%;
+  margin: 0 auto;
+}
+.v2-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 16px;
+}
+.v2-tile {
+  text-decoration: none;
+  color: inherit;
+  transition: border-color 0.15s;
+}
+.v2-tile:hover {
+  border-color: var(--v2-accent);
+}
+.v2-tile h2 {
+  color: var(--v2-accent);
+}
+.v2-table-wrap {
+  overflow-x: auto;
+  margin-top: 8px;
+}
+.v2-table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 13px;
+}
+.v2-table th,
+.v2-table td {
+  text-align: left;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--v2-line);
+  white-space: nowrap;
+}
+.v2-table th {
+  color: var(--v2-muted);
+  font-weight: 600;
+}
+
+/* ---------- panel nội bộ ---------- */
+.v2-workbench {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.v2-toolbar {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.v2-toolbar .v2-btn-primary {
+  margin-left: auto;
+}
+.v2-kinds {
+  border: 0;
+  padding: 0;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  font-size: 13px;
+  flex-wrap: wrap;
+}
+.v2-kinds legend {
+  float: left;
+  color: var(--v2-muted);
+  margin-right: 4px;
+}
+.v2-kinds label {
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
+}
+
+/*
+  Chiều cao THẬT cho khung nhúng: bundle không tự đẩy chiều cao cha; cha cao 0 là màn trắng.
+  Khung chiếm phần còn lại của màn, tối thiểu 520px để panel + ô soạn vừa khít.
+*/
+.v2-surface {
+  position: relative;
+  flex: 1;
+  min-height: 520px;
+  background: var(--v2-surface);
+  border: 1px solid var(--v2-line);
+  border-radius: var(--v2-radius);
+  overflow: hidden;
+}
+.v2-surface-host {
+  position: absolute;
+  inset: 0;
+}
+.v2-surface-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  text-align: center;
+  background: rgba(255, 255, 255, 0.92);
+}
+.v2-surface-error {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: center;
+  color: var(--v2-err-fg);
+  max-width: 520px;
+}
+
+.v2-compose {
+  flex: 1;
+  min-height: 520px;
+  display: grid;
+  grid-template-columns: minmax(280px, 340px) 1fr;
+  gap: 12px;
+}
+.v2-compose .v2-surface {
+  min-height: 0;
+}
+
+/* Khung hẹp: xếp chồng — danh sách trên, panel dưới, mỗi khối cao đủ dùng. */
+@media (max-width: 760px) {
+  .v2-main {
+    padding: 10px;
+  }
+  .v2-compose {
+    grid-template-columns: 1fr;
+    grid-template-rows: 360px 560px;
+  }
+  .v2-who {
+    margin-left: 0;
+  }
+}
+
+.v2-foot {
+  font-size: 12px;
+  text-align: right;
+}
+
+/* ---------- hộp thoại ---------- */
+.v2-dialog {
+  /* `* { margin: 0 }` ở đầu file đè `margin: auto` mặc định — thứ căn giữa <dialog> modal. */
+  margin: auto;
+  border: 0;
+  border-radius: 12px;
+  padding: 0;
+  width: min(560px, calc(100vw - 24px));
+  box-shadow: 0 20px 60px rgba(15, 23, 42, 0.35);
+}
+.v2-dialog::backdrop {
+  background: rgba(15, 23, 42, 0.45);
+}
+.v2-dialog .v2-form {
+  padding: 18px 20px;
+}
+.v2-dialog-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.v2-dialog-head h2 {
+  font-size: 17px;
+}
+.v2-x {
+  border: 0;
+  background: transparent;
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+  color: var(--v2-muted);
+}
+.v2-result {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  font-size: 13px;
+}
+.v2-invites {
+  list-style: none;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.v2-invites li {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.v2-invites code {
+  flex: 1 1 100%;
+  user-select: all;
+}
+
+/* ---------- tự tạo tài khoản ---------- */
+.v2-main > .v2-card.v2-form,
+.v2-main > .v2-done {
+  max-width: 560px;
+  width: 100%;
+  margin: 0 auto;
+}
+.v2-done {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.v2-secret {
+  user-select: all;
+  font-size: 14px;
+}
