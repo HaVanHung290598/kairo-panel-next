@@ -52,7 +52,7 @@ export type KairoWidgetApi = {
   mount(options: KairoWidgetMountOptions): () => void
 }
 
-export type KairoConversationKind = 'direct' | 'group' | 'channel' | 'business'
+export type KairoConversationKind = 'direct' | 'group' | 'channel' | 'business' | 'guest'
 
 /** Chỉ v2 (vòng 25, AC-10) — danh sách hội thoại người đang đăng nhập là thành viên. */
 export type KairoConversationListMountOptions = {
@@ -61,7 +61,7 @@ export type KairoConversationListMountOptions = {
   graphqlUrl?: string
   wsUrl?: string
   tenantSlug?: string
-  /** Mặc định cả bốn loại. */
+  /** Bỏ trống = mọi loại bundle hỗ trợ (hiện gồm cả `guest`). */
   kinds?: KairoConversationKind[]
   selectedId?: string
   /** Người dùng chọn một hàng. `layout:'list'`: host tự mount KairoPanelV2 ở đâu tuỳ ý. */

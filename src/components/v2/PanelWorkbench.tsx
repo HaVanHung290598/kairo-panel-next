@@ -27,6 +27,7 @@ const KINDS: { value: KairoConversationKind; label: string }[] = [
   { value: 'group', label: 'Nhóm' },
   { value: 'channel', label: 'Kênh' },
   { value: 'business', label: 'Nghiệp vụ (đối tác)' },
+  { value: 'guest', label: 'Khách (widget)' },
 ]
 
 type Layout = 'split' | 'list'
@@ -78,7 +79,8 @@ export function PanelWorkbench() {
         target: host,
         token: session.token,
         ...common,
-        kinds,
+        // Tích đủ mọi ô thì không truyền `kinds`: bundle tự hiện cả loại nó thêm về sau.
+        ...(kinds.length === KINDS.length ? {} : { kinds }),
         layout,
         // Mount lại (đổi kiểu/lọc) giữ nguyên hàng đang chọn — đọc từ URL, không từ state cũ.
         ...(readUrl().selected ? { selectedId: readUrl().selected! } : {}),
