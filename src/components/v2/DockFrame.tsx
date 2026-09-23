@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 
 import { primeSessionV2 } from '@/lib/v2/api'
 import { useV2 } from '@/kairo/v2/context'
-import { isDockMessage, postDock } from '@/kairo/v2/dockChannel'
+import { isDockMessage, postDock, type DockAction } from '@/kairo/v2/dockChannel'
 import { panelExtras, serverOptions } from '@/kairo/v2/mountOptions'
 import { useKairoMount } from '@/kairo/v2/useKairoMount'
 import { SurfaceHost } from './SurfaceHost'
@@ -13,7 +13,16 @@ import { SurfaceHost } from './SurfaceHost'
   Nội dung iframe của dock chat — MỘT `KairoPanelV2`, không có khung trang, không tự chọn hội thoại.
   Trang cha (`ChatDock`) quyết hội thoại nào và đưa token phiên xuống qua `postMessage`
   (`dockChannel.ts`); đổi hội thoại là gỡ panel cũ, mount panel mới.
+
+  Nút cửa sổ (đổi hội thoại · thu nhỏ · đóng) nằm TRONG đầu khung panel qua tuỳ chọn `dock` của
+  bundle — bấm là báo lên trang. Bundle cũ không có tuỳ chọn này: dò xem nút có thật được vẽ
+  không (`.kairo-nut-dock` trong shadow root) rồi báo `status`, trang tự giữ thanh tiêu đề riêng
+  khi không có.
 */
+
+/** Chờ tối đa ngần này cho đầu khung panel vẽ xong (panel boot: me → danh sách → hội thoại). */
+const DO_NUT_MS = 20_000
+
 export function DockFrame() {
   const { config, kairo, error } = useV2()
   const [conversationId, setConversationId] = useState<string | null>(null)
@@ -35,6 +44,8 @@ export function DockFrame() {
     if (config && kairo && window.parent !== window) postDock(window.parent, { type: 'kairo-dock:ready' })
   }, [config, kairo])
 
+  const bao = (action: DockAction) => postDock(window.parent, { type: 'kairo-dock:action', action })
+
   const panel = useKairoMount({
     enabled: Boolean(config && kairo && conversationId),
     deps: [config, kairo, conversationId],
@@ -47,9 +58,35 @@ export function DockFrame() {
         ...serverOptions(config),
         ...panelExtras(config),
         onSessionEnded: onEnded,
+        dock: {
+          onSwitch: () => bao('switch'),
+          onMinimize: () => bao('minimize'),
+          onClose: () => bao('close'),
+        },
       })
     },
   })
+
+  // Báo trang: đầu khung panel đã có nút cửa sổ chưa. Chưa mount / lỗi / bundle cũ ⇒ `false`.
+  // Đang mount lại (đổi hội thoại) thì giữ nguyên báo cũ — khỏi nháy thanh tiêu đề của trang.
+  const hostRef = panel.hostRef
+  useEffect(() => {
+    if (panel.status === 'loading') return
+    if (panel.status !== 'ready') {
+      postDock(window.parent, { type: 'kairo-dock:status', controls: false })
+      return
+    }
+    const batDau = Date.now()
+    const id = window.setInterval(() => {
+      const shadow = hostRef.current?.firstElementChild?.shadowRoot
+      const co = Boolean(shadow?.querySelector('.kairo-nut-dock'))
+      if (co || Date.now() - batDau > DO_NUT_MS) {
+        window.clearInterval(id)
+        postDock(window.parent, { type: 'kairo-dock:status', controls: co })
+      }
+    }, 250)
+    return () => window.clearInterval(id)
+  }, [panel.status, conversationId, hostRef])
 
   if (error) {
     return (

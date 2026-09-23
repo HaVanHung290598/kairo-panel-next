@@ -12,20 +12,30 @@ import type { SessionV2 } from '@/lib/v2/api'
     dock  → trang : `ready`              — iframe đã nạp config + bundle, sẵn sàng nhận hội thoại
     trang → dock  : `open`               — hội thoại đang chọn (null = chưa chọn) + token phiên của
                                             trang (dock dùng chung, không xin phiên Kairo thứ hai)
+    dock  → trang : `status`             — panel đã vẽ nút cửa sổ của nó chưa (`controls`) — bundle
+                                            có tuỳ chọn `dock` thì trang ẩn thanh tiêu đề riêng
+    dock  → trang : `action`             — người dùng bấm nút cửa sổ trong đầu khung panel
+
   Hội thoại đang chọn chỉ có MỘT nguồn: state `selected` của trang. Dock không tự đổi hội thoại —
   đổi ở thanh tiêu đề dock là đổi `selected` của trang, rồi trang gửi `open` xuống.
 */
 
 export const DOCK_PATH = '/v2/dock'
 
+export type DockAction = 'switch' | 'minimize' | 'close'
+
 export type DockMessage =
   | { type: 'kairo-dock:ready' }
   | { type: 'kairo-dock:open'; conversationId: string | null; session: SessionV2 | null }
+  | { type: 'kairo-dock:status'; controls: boolean }
+  | { type: 'kairo-dock:action'; action: DockAction }
+
+const TYPES = new Set(['kairo-dock:ready', 'kairo-dock:open', 'kairo-dock:status', 'kairo-dock:action'])
 
 export function isDockMessage(e: MessageEvent): e is MessageEvent<DockMessage> {
   if (e.origin !== window.location.origin) return false
   const t = (e.data as { type?: unknown } | null)?.type
-  return t === 'kairo-dock:ready' || t === 'kairo-dock:open'
+  return typeof t === 'string' && TYPES.has(t)
 }
 
 export function postDock(target: Window | null | undefined, msg: DockMessage): void {

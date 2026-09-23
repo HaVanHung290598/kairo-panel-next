@@ -8,8 +8,10 @@ import { DOCK_PATH, isDockMessage, postDock } from '@/kairo/v2/dockChannel'
 /*
   Dock chat nhỏ ở góc trái dưới — kiểu cửa sổ chat của Facebook web.
 
-    · Mở     — cửa sổ 340×460: thanh tiêu đề (tên hội thoại, bấm để đổi hội thoại · thu nhỏ · đóng)
-               + `KairoPanelV2` trong iframe `/v2/dock`.
+    · Mở     — cửa sổ 340×460 chứa `KairoPanelV2` trong iframe `/v2/dock`. Đầu khung PANEL là thanh
+               tiêu đề duy nhất: nút đổi hội thoại · thu nhỏ · đóng nằm cuối hàng nút của nó (tuỳ
+               chọn `dock` của bundle, 2026-09-23). Bundle cũ không vẽ được nút đó ⇒ trang giữ
+               thanh tiêu đề riêng của mình (tên + ▾ · – · ×) như bản đầu.
     · Thu nhỏ — chỉ còn viên tròn tên hội thoại; iframe vẫn sống (ẩn) nên socket và nội dung đang
                gõ dở không mất, mở lại là thấy ngay.
     · Tắt    — gỡ hẳn iframe; bật lại ở thanh công cụ của trang.
@@ -50,6 +52,10 @@ export function ChatDock({ mode, onModeChange, selected, onSelect }: Props) {
   const [frameReady, setFrameReady] = useState(false)
   const [convs, setConvs] = useState<RestConversation[]>([])
   const [picking, setPicking] = useState(false)
+  /** Đầu khung panel trong iframe đã có nút cửa sổ (bundle có tuỳ chọn `dock`) ⇒ ẩn thanh riêng. */
+  const [panelControls, setPanelControls] = useState(false)
+  const modeRef = useRef(onModeChange)
+  modeRef.current = onModeChange
 
   const current = convs.find((c) => c.id === selected)
   const title = selected ? titleOf(current) : 'Chat'
@@ -70,13 +76,24 @@ export function ChatDock({ mode, onModeChange, selected, onSelect }: Props) {
 
   // Iframe gỡ khi tắt dock ⇒ lần bật sau phải chờ `ready` mới.
   useEffect(() => {
-    if (mode === 'off') setFrameReady(false)
+    if (mode !== 'off') return
+    setFrameReady(false)
+    setPanelControls(false)
   }, [mode])
 
   useEffect(() => {
     const onMessage = (e: MessageEvent) => {
       if (e.source !== frameRef.current?.contentWindow || !isDockMessage(e)) return
-      if (e.data.type === 'kairo-dock:ready') setFrameReady(true)
+      const m = e.data
+      if (m.type === 'kairo-dock:ready') setFrameReady(true)
+      if (m.type === 'kairo-dock:status') setPanelControls(m.controls)
+      if (m.type === 'kairo-dock:action') {
+        if (m.action === 'switch') setPicking((p) => !p)
+        else {
+          setPicking(false)
+          modeRef.current(m.action === 'minimize' ? 'min' : 'off')
+        }
+      }
     }
     window.addEventListener('message', onMessage)
     return () => window.removeEventListener('message', onMessage)
@@ -128,7 +145,8 @@ export function ChatDock({ mode, onModeChange, selected, onSelect }: Props) {
         </div>
       )}
 
-      <section className="v2-dock-window" aria-label="Dock chat" hidden={mode === 'min'}>
+      <section className={`v2-dock-window${panelControls ? ' no-head' : ''}`} aria-label="Dock chat" hidden={mode === 'min'}>
+        {!panelControls && (
         <header className="v2-dock-head">
           <button
             type="button"
@@ -168,6 +186,7 @@ export function ChatDock({ mode, onModeChange, selected, onSelect }: Props) {
             ×
           </button>
         </header>
+        )}
 
         {picking && (
           <ul className="v2-dock-picker" role="listbox" aria-label="Chọn hội thoại cho dock">

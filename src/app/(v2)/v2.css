@@ -641,6 +641,11 @@ code {
   border-bottom: 1px solid var(--v2-line);
   box-shadow: 0 8px 16px rgba(16, 24, 40, 0.12);
 }
+/* Không có thanh riêng (đầu khung panel là thanh tiêu đề): bộ chọn thả ngay dưới đầu khung đó. */
+.v2-dock-window.no-head .v2-dock-picker {
+  top: 48px;
+  border-top: 1px solid var(--v2-line);
+}
 .v2-dock-picker button {
   width: 100%;
   display: flex;

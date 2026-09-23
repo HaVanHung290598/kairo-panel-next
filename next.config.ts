@@ -5,8 +5,8 @@ import type { NextConfig } from 'next'
 // điều mà bản Vite + BE riêng cổng không làm được ở môi trường dev.
 const nextConfig: NextConfig = {
   output: 'standalone',
-  // Nút dev của Next (chỉ `next dev`) mặc định ở góc trái dưới — đúng chỗ dock chat của /v2/panel.
-  devIndicators: { position: 'bottom-right' },
+  // Tắt nút dev của Next (chỉ `next dev`): nó nằm cả trong iframe dock chat, đè nút gửi của panel.
+  devIndicators: false,
   /*
     Chặn cache cho toàn bộ /api/*.
 

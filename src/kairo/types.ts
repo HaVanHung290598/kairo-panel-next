@@ -23,6 +23,11 @@ export type KairoPanelMountOptions = {
   appUrl?: string
   /** Chỉ v2: phiên hết hạn (`expired`) hoặc tài khoản bị khoá (`locked`). */
   onSessionEnded?: (reason: string) => void
+  /**
+   * Chỉ v2 (bundle từ 2026-09-23): panel nằm trong cửa sổ nhỏ do trang quản (dock chat) — mỗi hàm
+   * thêm một nút ở cuối đầu khung panel. Bundle cũ bỏ qua tuỳ chọn này (không vẽ nút).
+   */
+  dock?: { onSwitch?: () => void; onMinimize?: () => void; onClose?: () => void }
 }
 
 export type KairoPanelApi = {
