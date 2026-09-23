@@ -509,3 +509,242 @@ code {
   user-select: all;
   font-size: 14px;
 }
+
+/*
+  ---------- dock chat nhỏ góc trái dưới (ChatDock, kiểu Facebook web) ----------
+  Nổi trên trang (fixed), không chiếm chỗ của panel to. Panel nhỏ nằm trong iframe `/v2/dock`.
+*/
+.v2-dock-toggle {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  font-size: 13px;
+}
+
+.v2-dock {
+  position: fixed;
+  left: 16px;
+  bottom: 0;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+.v2-dock.is-min {
+  bottom: 16px;
+}
+
+.v2-dock-window {
+  width: 340px;
+  height: 460px;
+  max-height: calc(100vh - 72px);
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  background: var(--v2-surface);
+  border: 1px solid var(--v2-line);
+  border-bottom: 0;
+  border-radius: var(--v2-radius) var(--v2-radius) 0 0;
+  box-shadow: 0 8px 28px rgba(16, 24, 40, 0.22);
+  overflow: hidden;
+}
+/* `hidden` khi thu nhỏ: iframe vẫn sống (socket, bản nháp) — chỉ không hiện. */
+.v2-dock-window[hidden] {
+  display: none;
+}
+
+.v2-dock-head {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  height: 44px;
+  padding: 0 6px 0 4px;
+  background: var(--v2-surface);
+  border-bottom: 1px solid var(--v2-line);
+}
+.v2-dock-title {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font: inherit;
+  font-weight: 600;
+  color: var(--v2-text);
+  background: none;
+  border: 0;
+  border-radius: 8px;
+  padding: 4px 6px;
+  cursor: pointer;
+  text-align: left;
+}
+.v2-dock-title:hover {
+  background: #eef1f6;
+}
+.v2-dock-title-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.v2-dock-caret {
+  color: var(--v2-muted);
+  font-size: 11px;
+}
+
+.v2-dock-avatar {
+  flex: none;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--v2-accent);
+  color: var(--v2-accent-ink);
+  font-size: 13px;
+  font-weight: 700;
+}
+.v2-dock-avatar.small {
+  width: 26px;
+  height: 26px;
+  font-size: 12px;
+}
+
+.v2-dock-icon {
+  flex: none;
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: var(--v2-accent);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+}
+.v2-dock-icon:hover {
+  background: #eef1f6;
+}
+
+.v2-dock-picker {
+  position: absolute;
+  top: 44px;
+  left: 0;
+  right: 0;
+  z-index: 2;
+  max-height: 300px;
+  overflow: auto;
+  list-style: none;
+  padding: 4px;
+  background: var(--v2-surface);
+  border-bottom: 1px solid var(--v2-line);
+  box-shadow: 0 8px 16px rgba(16, 24, 40, 0.12);
+}
+.v2-dock-picker button {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font: inherit;
+  font-size: 13px;
+  color: var(--v2-text);
+  background: none;
+  border: 0;
+  border-radius: 8px;
+  padding: 6px 8px;
+  cursor: pointer;
+  text-align: left;
+}
+.v2-dock-picker button:hover {
+  background: #eef1f6;
+}
+.v2-dock-picker button.on {
+  background: #e3edfd;
+}
+.v2-dock-picker-title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.v2-dock-picker-kind {
+  flex: none;
+  color: var(--v2-muted);
+  font-size: 11.5px;
+}
+.v2-dock-picker-empty {
+  padding: 10px;
+  color: var(--v2-muted);
+}
+
+.v2-dock-frame-el {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  border: 0;
+  display: block;
+}
+
+.v2-dock-bubble {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  max-width: 260px;
+  padding: 4px 4px 4px 4px;
+  background: var(--v2-surface);
+  border: 1px solid var(--v2-line);
+  border-radius: 999px;
+  box-shadow: 0 6px 20px rgba(16, 24, 40, 0.2);
+}
+.v2-dock-bubble-main {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font: inherit;
+  font-weight: 600;
+  color: var(--v2-text);
+  background: none;
+  border: 0;
+  border-radius: 999px;
+  padding: 2px 8px 2px 2px;
+  cursor: pointer;
+}
+.v2-dock-bubble-main:hover {
+  background: #eef1f6;
+}
+.v2-dock-bubble-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Trang trong iframe: chỉ một panel lấp đầy khung, không lề, không viền. */
+.v2-dock-page {
+  height: 100%;
+  display: flex;
+  background: var(--v2-surface);
+}
+.v2-dock-page .v2-dock-frame {
+  min-height: 0;
+  border: 0;
+  border-radius: 0;
+}
+.v2-dock-frame-msg {
+  margin: auto;
+  padding: 16px;
+  color: var(--v2-err-fg);
+  text-align: center;
+}
+
+@media (max-width: 480px) {
+  .v2-dock {
+    left: 8px;
+    right: 8px;
+  }
+  .v2-dock-window {
+    width: 100%;
+  }
+}

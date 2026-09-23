@@ -228,6 +228,40 @@ export async function listConversations(userId: string): Promise<V2Conversation[
   return all
 }
 
+/** Tên người dùng theo id — sống cả vòng đời tiến trình; tên người trong tenant hiếm khi đổi. */
+const displayNameCache = new Map<string, string>()
+
+/**
+ * Tên người kia của mỗi hội thoại 1-1 (id hội thoại → tên). Tra song song từng nhóm nhỏ để không
+ * dội SDK; người không tra được thì bỏ qua (thanh tiêu đề tự lùi về "Hội thoại 1-1").
+ */
+export async function peerNames(meId: string, conversations: V2Conversation[]): Promise<Map<string, string>> {
+  const peerOf = new Map<string, string>()
+  for (const c of conversations) {
+    const peer = c.kind === 'direct' ? c.memberUserIds?.find((id) => id !== meId) : undefined
+    if (peer) peerOf.set(c.id, peer)
+  }
+  const missing = [...new Set(peerOf.values())].filter((id) => !displayNameCache.has(id))
+  for (let i = 0; i < missing.length; i += 8) {
+    await Promise.all(
+      missing.slice(i, i + 8).map(async (userId) => {
+        try {
+          const u = await resolveUser({ userId })
+          if (u?.displayName) displayNameCache.set(userId, u.displayName)
+        } catch {
+          /* Một người tra lỗi không làm hỏng cả danh sách. */
+        }
+      }),
+    )
+  }
+  const out = new Map<string, string>()
+  for (const [cid, uid] of peerOf) {
+    const name = displayNameCache.get(uid)
+    if (name) out.set(cid, name)
+  }
+  return out
+}
+
 export async function createDirect(actorUserId: string, peerUserId: string): Promise<{ conversationId: string }> {
   const r = await callSdkV2<{ conversationId: string }>('/conversations/direct', {
     method: 'POST',

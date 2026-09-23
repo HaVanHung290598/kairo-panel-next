@@ -8,6 +8,7 @@ import {
   fixedUser,
   invitationLink,
   listConversations,
+  peerNames,
   requireUserByEmail,
 } from '@/server/v2'
 
@@ -17,12 +18,21 @@ export const dynamic = 'force-dynamic'
  * Hội thoại của user cố định, nhìn từ phía SERVER tích hợp (app-key).
  *
  * Danh sách hiển thị cho người dùng là `KairoConversationListV2` (đi theo token phiên); route GET
- * này chỉ để trang kiểm thử đối chiếu "REST thấy gì" với "bundle hiện gì".
+ * này để trang kiểm thử đối chiếu "REST thấy gì" với "bundle hiện gì", và cho thanh tiêu đề của
+ * dock chat (`ChatDock`).
+ *
+ * `?names=1`: hội thoại 1-1 có `title` rỗng ở SDK — điền `peerName` (tên người kia) bằng
+ * `/users/resolve`. Mặc định không tra, để bảng "REST thấy gì" đúng nguyên văn SDK.
  */
-export async function GET() {
+export async function GET(req: Request) {
   return handle(async () => {
     const me = await fixedUser()
-    return { conversations: await listConversations(me.userId) }
+    const conversations = await listConversations(me.userId)
+    if (new URL(req.url).searchParams.get('names') !== '1') return { conversations }
+    const names = await peerNames(me.userId, conversations)
+    return {
+      conversations: conversations.map((c) => (names.has(c.id) ? { ...c, peerName: names.get(c.id) } : c)),
+    }
   })
 }
 

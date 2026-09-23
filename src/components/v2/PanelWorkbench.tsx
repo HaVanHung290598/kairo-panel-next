@@ -6,6 +6,7 @@ import { useV2 } from '@/kairo/v2/context'
 import { panelExtras, serverOptions } from '@/kairo/v2/mountOptions'
 import { useKairoMount } from '@/kairo/v2/useKairoMount'
 import type { KairoConversationKind } from '@/kairo/types'
+import { ChatDock, type DockMode } from './ChatDock'
 import { CreateConversation } from './CreateConversation'
 import { SurfaceHost } from './SurfaceHost'
 
@@ -20,7 +21,22 @@ import { SurfaceHost } from './SurfaceHost'
 
   Lọc loại (`kinds`) và kiểu nhúng đổi được ngay trên trang; đổi là gỡ bề mặt cũ, mount lại.
   Hội thoại đang chọn nằm trên URL (`?c=<id>`) để mở thẳng từ trang tự tạo tài khoản.
+
+  Dock chat nhỏ góc trái dưới (`ChatDock`, kiểu Facebook web) mở CÙNG hội thoại đang chọn — một
+  `selected` cho cả hai: chọn ở danh sách to thì dock đổi theo, đổi ở dock thì danh sách + panel to
+  đổi theo. Trạng thái mở / thu nhỏ / tắt của dock nhớ trong localStorage của trình duyệt.
 */
+
+const DOCK_KEY = 'kpn.v2.dock'
+
+function readDockMode(): DockMode {
+  try {
+    const v = window.localStorage.getItem(DOCK_KEY)
+    return v === 'min' || v === 'off' ? v : 'open'
+  } catch {
+    return 'open'
+  }
+}
 
 const KINDS: { value: KairoConversationKind; label: string }[] = [
   { value: 'direct', label: '1-1' },
@@ -52,14 +68,25 @@ export function PanelWorkbench() {
   const [selected, setSelected] = useState<string | null>(null)
   const [ready, setReady] = useState(false)
   const [creating, setCreating] = useState(false)
+  const [dock, setDock] = useState<DockMode>('off')
 
   // URL chỉ đọc sau khi hydrate — trang được prerender nên không đọc được lúc render.
   useEffect(() => {
     const u = readUrl()
     setLayout(u.layout)
     setSelected(u.selected)
+    setDock(readDockMode())
     setReady(true)
   }, [])
+
+  useEffect(() => {
+    if (!ready) return
+    try {
+      window.localStorage.setItem(DOCK_KEY, dock)
+    } catch {
+      /* Không nhớ được thì lần sau dock mở mặc định. */
+    }
+  }, [ready, dock])
 
   useEffect(() => {
     if (ready) writeUrl(layout, selected)
@@ -111,7 +138,8 @@ export function PanelWorkbench() {
   const toggleKind = (k: KairoConversationKind) =>
     setKinds((cur) => (cur.includes(k) ? cur.filter((x) => x !== k) : [...cur, k]))
 
-  const onCreated = useCallback(
+  // Đổi hội thoại từ NGOÀI danh sách to (vừa tạo, hoặc chọn ở dock).
+  const selectFromOutside = useCallback(
     (conversationId: string) => {
       setSelected(conversationId)
       const host = list.hostRef.current
@@ -150,6 +178,15 @@ export function PanelWorkbench() {
           ))}
         </fieldset>
 
+        <label className="v2-dock-toggle">
+          <input
+            type="checkbox"
+            checked={dock !== 'off'}
+            onChange={(e) => setDock(e.target.checked ? 'open' : 'off')}
+          />
+          Dock chat góc trái
+        </label>
+
         <button type="button" className="v2-btn v2-btn-primary" onClick={() => setCreating(true)} disabled={!config}>
           ＋ Tạo hội thoại
         </button>
@@ -185,8 +222,10 @@ export function PanelWorkbench() {
       )}
 
       {creating && config && (
-        <CreateConversation config={config} onClose={() => setCreating(false)} onCreated={onCreated} />
+        <CreateConversation config={config} onClose={() => setCreating(false)} onCreated={selectFromOutside} />
       )}
+
+      {listReady && <ChatDock mode={dock} onModeChange={setDock} selected={selected} onSelect={selectFromOutside} />}
     </section>
   )
 }

@@ -59,6 +59,14 @@ export function getSessionV2(): Promise<SessionV2> {
   return inflight
 }
 
+/**
+ * Nhận token phiên từ trang cha (dock trong iframe) — iframe có bản module riêng nên không thấy
+ * `cached` của trang; nhận lại token thay vì xin một phiên Kairo mới cho cùng một người.
+ */
+export function primeSessionV2(s: SessionV2): void {
+  if (stillFresh(s)) cached = s
+}
+
 /** Vứt token đang giữ — gọi khi bundle báo `onSessionEnded` hoặc trước khi thử lại. */
 export function clearSessionV2(): void {
   cached = null
@@ -74,10 +82,18 @@ export type RestConversation = {
   archived: boolean
   memberCount: number
   memberRole: string
+  /** Chỉ khi gọi với `withNames`: tên người kia của hội thoại 1-1 (SDK để `title` rỗng). */
+  peerName?: string
 }
 
-export async function fetchRestConversations(signal: AbortSignal): Promise<RestConversation[]> {
-  const body = await request<{ conversations?: RestConversation[] }>('/api/v2/conversations', { signal })
+export async function fetchRestConversations(
+  signal: AbortSignal,
+  { withNames = false }: { withNames?: boolean } = {},
+): Promise<RestConversation[]> {
+  const body = await request<{ conversations?: RestConversation[] }>(
+    `/api/v2/conversations${withNames ? '?names=1' : ''}`,
+    { signal },
+  )
   return body.conversations ?? []
 }
 
