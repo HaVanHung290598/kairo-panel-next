@@ -51,6 +51,7 @@ server (Docker) runtime luôn là `server`, trình duyệt gọi thẳng URL tro
 | `/v2/panel` | v2 `/sdk/v2/kairo-widget.js` | `KairoConversationListV2` `split` (gói sẵn) hoặc `list` + `KairoPanelV2` (tự ghép); lọc loại; tạo 1-1 / nhóm / kênh nghiệp vụ + link mời đối tác |
 | `/v2/dang-ky` | — | người dùng tự tạo tài khoản (`POST /sdk/v2/users`), đăng nhập được ngay web-enduser |
 | `/v2/gara` | v2 | `KairoWidgetV2` khách vãng lai |
+| `/v2/webhook` | — | bàn NHẬN webhook (màn "SDK & Tích hợp → Đăng ký webhook" của web-tenant-admin) — xem mục dưới |
 
 Mỗi trang chỉ đọc global của bản mình (`src/kairo/loadBundle.ts`) — env trỏ bundle nào cũng
 không làm `/` chạy nhầm v2. Chuyển giữa v1/v2 là tải lại trang (hai bundle đều giữ store singleton).
@@ -102,6 +103,25 @@ Hai kênh KHÁC nhau, đừng nhầm. `KairoPanel` cần token do server mint v�
 gắn mình vào cuối `<body>` trong Shadow DOM. Cả hai nằm chung một bundle
 `kairo-widget.js`, gắn `window.KairoPanel` và `window.KairoWidget` cùng lúc — nên
 `loadBundle.ts` chỉ chèn một thẻ script cho cả hai.
+
+## Bàn nhận webhook — `/v2/webhook`
+
+Điểm nhận: `POST /api/webhooks/kairo[/<kênh>]` (kênh là nhãn tuỳ chọn để tách nhiều endpoint
+đăng ký cùng lúc). Mọi request đều được ghi sổ — kể cả chữ ký sai — rồi trả mã/độ trễ đang cài
+trên trang (200 mặc định; 500/503 hoặc chậm 12s để xem Kairo retry 1m → 5m → 30m).
+
+- **Chữ ký:** `X-Kairo-Signature = hex(HMAC-SHA256(khoá, X-Kairo-Timestamp + "." + thân))`, khoá là
+  32 byte THÔ = phần sau `whsec_` giải base64url (không phải nguyên chuỗi `whsec_…`). Secret dán ở
+  trang, chỉ giữ trong bộ nhớ server, không trả lại trình duyệt; nạp sẵn được bằng
+  `KAIRO_WEBHOOK_SECRETS=nhãn=whsec_…,nhãn2=whsec_…`.
+- **Sổ nằm trong bộ nhớ** (`src/server/webhookLog.ts`, 1000 bản gần nhất) — restart container là mất.
+- **Kairo SIT/UAT chỉ giao tới https công khai** (SSRF: `sdk/internal/webhook/ssrf.go`). Trên server
+  .33 nginx mở RIÊNG đường này qua 443 (`/etc/nginx/sites-available/kairo-panel-webhook`, cert
+  wildcard `*.tienloixanh.org`, mọi đường khác của tên đó trả 404) ⇒ URL để đăng ký là
+  `https://cardoctor.tienloixanh.org/api/webhooks/kairo`, khai ở `KAIRO_WEBHOOK_PUBLIC_URL` để trang
+  in đúng. Trang xem log vẫn chỉ ở `http://cardoctor.tienloixanh.org:8765/v2/webhook`.
+- Trang log/cài đặt không có đăng nhập (như mọi trang của bàn thử này) — ai mở được :8765 là xoá
+  được log, thêm được secret. Payload Kairo chỉ có id, không tên, không thân tin.
 
 ## Cấu trúc
 

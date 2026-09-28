@@ -87,6 +87,13 @@ export function Hub() {
             (AC-9) thay tên thật.
           </p>
         </a>
+        <a className="v2-card v2-tile" href="/v2/webhook">
+          <h2>Bàn nhận webhook</h2>
+          <p>
+            URL https để đăng ký ở <b>SDK &amp; Tích hợp → Đăng ký webhook</b>; kiểm chữ ký{' '}
+            <code>X-Kairo-Signature</code>, xem log từng sự kiện, lọc, giả lập lỗi để xem Kairo retry.
+          </p>
+        </a>
       </div>
 
       <section className="v2-card">

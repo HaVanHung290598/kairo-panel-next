@@ -16,6 +16,7 @@ const NAV = [
   { href: '/v2/panel', label: 'Panel nội bộ' },
   { href: '/v2/dang-ky', label: 'Tự tạo tài khoản' },
   { href: '/v2/gara', label: 'Widget khách' },
+  { href: '/v2/webhook', label: 'Webhook' },
 ]
 
 export function V2Shell({ children }: { children: React.ReactNode }) {
