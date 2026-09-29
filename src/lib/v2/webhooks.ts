@@ -23,6 +23,7 @@ export type WebhookEntry = {
     mode: 'decoded' | 'literal' | null
     timestamp: number | null
     skewSec: number | null
+    reverified?: boolean
   }
   duplicateOf: number | null
   response: { status: number; delayMs: number }
@@ -34,6 +35,7 @@ export type PublicSecret = { id: string; label: string; hint: string; format: st
 export type LogPage = {
   entries: WebhookEntry[]
   lastSeq: number
+  rev: number
   total: number
   capacity: number
   startedAt: string

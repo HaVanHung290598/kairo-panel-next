@@ -89,6 +89,12 @@ function summary(e: WebhookEntry): string {
   return parts.join(' · ')
 }
 
+/** Môi trường = nhãn secret đã khớp chữ ký (mỗi lần đăng ký ở SIT/UAT, Kairo sinh một secret riêng). */
+const NO_ENV = '__khong-xac-dinh__'
+function envOf(e: WebhookEntry): string {
+  return e.signature.status === 'valid' && e.signature.matched ? e.signature.matched : NO_ENV
+}
+
 function skewText(sec: number | null): string {
   if (sec === null) return '—'
   if (Math.abs(sec) < 2) return 'khớp giờ'
@@ -105,8 +111,16 @@ function download(name: string, data: unknown) {
   URL.revokeObjectURL(url)
 }
 
-type Filters = { event: string; sig: string; channel: string; source: string; q: string; dupOnly: boolean }
-const NO_FILTER: Filters = { event: '', sig: '', channel: '', source: '', q: '', dupOnly: false }
+type Filters = {
+  env: string
+  event: string
+  sig: string
+  channel: string
+  source: string
+  q: string
+  dupOnly: boolean
+}
+const NO_FILTER: Filters = { env: '', event: '', sig: '', channel: '', source: '', q: '', dupOnly: false }
 
 export function WebhookMonitor() {
   const [entries, setEntries] = useState<WebhookEntry[]>([])
@@ -119,18 +133,21 @@ export function WebhookMonitor() {
   const [open, setOpen] = useState<Set<number>>(new Set())
   const [fresh, setFresh] = useState<Set<number>>(new Set())
   const lastSeq = useRef(0)
+  const lastRev = useRef<number | null>(null)
 
   const [origin, setOrigin] = useState('')
   useEffect(() => setOrigin(window.location.origin), [])
 
   // ── poll ──
-  const pull = useCallback(async (signal?: AbortSignal) => {
+  const pull = useCallback(async function pull(signal?: AbortSignal): Promise<void> {
     const page = await fetchWebhookLog(lastSeq.current, signal)
-    // Server restart (sổ trong bộ nhớ) → seq về 0: bỏ bản cũ, đọc lại từ đầu.
-    if (page.lastSeq < lastSeq.current) {
+    // Server restart (seq tụt) hoặc bản ghi cũ bị sửa (rev đổi: kiểm lại chữ ký, xoá sổ) → đọc lại từ đầu.
+    const revChanged = lastRev.current !== null && page.rev !== lastRev.current
+    lastRev.current = page.rev
+    if (page.lastSeq < lastSeq.current || revChanged) {
       lastSeq.current = 0
       setEntries([])
-      return
+      return pull(signal)
     }
     setMeta({ total: page.total, capacity: page.capacity, startedAt: page.startedAt, publicUrl: page.publicUrl })
     setSettings(page.settings)
@@ -179,6 +196,18 @@ export function WebhookMonitor() {
 
   // ── lọc ──
   const channels = useMemo(() => [...new Set(entries.map((e) => e.channel))].sort(), [entries])
+  const envCounts = useMemo(() => {
+    const m = new Map<string, number>()
+    for (const e of entries) m.set(envOf(e), (m.get(envOf(e)) ?? 0) + 1)
+    return m
+  }, [entries])
+  // Màu cố định theo thứ tự secret đã khai (secret đã xoá nhưng còn trong log thì xếp sau).
+  const envColor = useMemo(() => {
+    const names = secrets.map((x) => x.label)
+    for (const k of envCounts.keys()) if (k !== NO_ENV && !names.includes(k)) names.push(k)
+    return new Map(names.map((n, i) => [n, i % 4]))
+  }, [secrets, envCounts])
+  const envList = useMemo(() => [...envColor.keys()], [envColor])
   const eventCounts = useMemo(() => {
     const m = new Map<string, number>()
     for (const e of entries) m.set(e.event ?? '(không rõ)', (m.get(e.event ?? '(không rõ)') ?? 0) + 1)
@@ -194,12 +223,14 @@ export function WebhookMonitor() {
     const q = filters.q.trim().toLowerCase()
     return entries
       .filter((e) => {
+        if (filters.env && envOf(e) !== filters.env) return false
         if (filters.event && (e.event ?? '(không rõ)') !== filters.event) return false
         if (filters.sig && e.signature.status !== filters.sig) return false
         if (filters.channel && e.channel !== filters.channel) return false
         if (filters.source && e.source !== filters.source) return false
         if (filters.dupOnly && e.duplicateOf === null) return false
-        if (q && !`${e.event ?? ''} ${e.channel} ${e.bodyText}`.toLowerCase().includes(q)) return false
+        if (q && !`${e.event ?? ''} ${e.channel} ${e.signature.matched ?? ''} ${e.bodyText}`.toLowerCase().includes(q))
+          return false
         return true
       })
       .reverse()
@@ -297,6 +328,21 @@ export function WebhookMonitor() {
           </p>
         )}
 
+        {envCounts.size > 0 && (
+          <div className="wh-chips" role="group" aria-label="Lọc nhanh theo môi trường">
+            {[...envCounts.entries()].map(([env, n]) => (
+              <button
+                key={env}
+                type="button"
+                className={`wh-chip wh-chip-env${filters.env === env ? ' on' : ''}`}
+                aria-pressed={filters.env === env}
+                onClick={() => setFilter('env', filters.env === env ? '' : env)}
+              >
+                <EnvBadge env={env} color={envColor.get(env)} /> <b>{n}</b>
+              </button>
+            ))}
+          </div>
+        )}
         {eventCounts.size > 0 && (
           <div className="wh-chips" role="group" aria-label="Lọc nhanh theo sự kiện">
             {[...eventCounts.entries()].map(([ev, n]) => (
@@ -315,6 +361,18 @@ export function WebhookMonitor() {
         )}
 
         <div className="wh-filters">
+          <label className="v2-field">
+            <span>Môi trường</span>
+            <select value={filters.env} onChange={(e) => setFilter('env', e.target.value)}>
+              <option value="">Tất cả</option>
+              {envList.map((n) => (
+                <option key={n} value={n}>
+                  {n} ({envCounts.get(n) ?? 0})
+                </option>
+              ))}
+              <option value={NO_ENV}>Không xác định ({envCounts.get(NO_ENV) ?? 0})</option>
+            </select>
+          </label>
           <label className="v2-field">
             <span>Sự kiện</span>
             <select value={filters.event} onChange={(e) => setFilter('event', e.target.value)}>
@@ -395,16 +453,18 @@ export function WebhookMonitor() {
               <colgroup>
                 <col style={{ width: 64 }} />
                 <col style={{ width: 104 }} />
+                <col style={{ width: 132 }} />
                 <col style={{ width: '24%' }} />
                 <col />
                 <col style={{ width: 124 }} />
-                <col style={{ width: 118 }} />
-                <col style={{ width: 70 }} />
+                <col style={{ width: 100 }} />
+                <col style={{ width: 60 }} />
               </colgroup>
               <thead>
                 <tr>
                   <th>#</th>
                   <th>Lúc nhận</th>
+                  <th>Môi trường</th>
                   <th>Sự kiện</th>
                   <th>Nội dung (id)</th>
                   <th>Chữ ký</th>
@@ -438,6 +498,9 @@ export function WebhookMonitor() {
                         {time(e.receivedAt)}
                       </td>
                       <td>
+                        <EnvBadge env={envOf(e)} color={envColor.get(envOf(e))} />
+                      </td>
+                      <td>
                         <code className="wh-ev">{e.event ?? '(không rõ)'}</code>
                         {e.source === 'self-test' && <span className="wh-tag">tự thử</span>}
                         {e.duplicateOf !== null && <span className="wh-tag wh-tag-dup">lặp #{e.duplicateOf}</span>}
@@ -454,7 +517,7 @@ export function WebhookMonitor() {
                     </tr>
                     {open.has(e.seq) && (
                       <tr className="wh-detail-row">
-                        <td colSpan={7}>
+                        <td colSpan={8}>
                           <Detail e={e} />
                         </td>
                       </tr>
@@ -559,6 +622,10 @@ function SecretsCard({ secrets, onChange }: { secrets: PublicSecret[]; onChange:
       <p className="v2-muted">
         Chữ ký = HMAC-SHA256(khoá, <code>timestamp + &quot;.&quot; + thân</code>), khoá là phần sau <code>whsec_</code>{' '}
         giải base64url. Secret chỉ giữ trong bộ nhớ server, không trả lại trình duyệt.
+      </p>
+      <p className="v2-hint">
+        <b>Nhãn = tên môi trường</b> hiện ở cột &quot;Môi trường&quot; của log (vd. <code>SIT</code>, <code>UAT</code>)
+        — webhook khớp secret nào thì thuộc môi trường đó. Thêm secret sau cũng được: log cũ sẽ được kiểm lại.
       </p>
       {secrets.length > 0 ? (
         <ul className="wh-secrets">
@@ -727,6 +794,7 @@ function Detail({ e }: { e: WebhookEntry }) {
               <>
                 {' '}
                 — khớp secret <b>{s.matched}</b>
+                {s.reverified && <span className="v2-muted"> (kiểm lại khi thêm secret)</span>}
               </>
             )}
           </dd>
@@ -800,4 +868,9 @@ function HeaderTable({ rows, empty }: { rows: [string, string][]; empty: string 
       </tbody>
     </table>
   )
+}
+
+function EnvBadge({ env, color }: { env: string; color: number | undefined }) {
+  if (env === NO_ENV) return <span className="wh-env wh-env-none">Không xác định</span>
+  return <span className={`wh-env wh-env-${color ?? 0}`}>{env}</span>
 }

@@ -54,6 +54,8 @@ export type WebhookEntry = {
     mode: 'decoded' | 'literal' | null
     timestamp: number | null
     skewSec: number | null
+    /** Khớp khi kiểm LẠI lúc thêm secret (webhook tới trước khi có secret). */
+    reverified?: boolean
   }
   /** Cùng chữ ký đã tới trước đó — giao lặp (retry, hoặc hai pod quét sát nhau). */
   duplicateOf: number | null
@@ -71,6 +73,8 @@ export type WebhookSettings = {
 
 type Store = {
   seq: number
+  /** Tăng khi bản ghi CŨ bị sửa (kiểm lại chữ ký, xoá sổ) — trình duyệt thấy đổi thì đọc lại từ đầu. */
+  rev: number
   entries: WebhookEntry[]
   secrets: Secret[]
   settings: WebhookSettings
@@ -85,6 +89,7 @@ function store(): Store {
   if (!g.__kairoWebhookStore) {
     g.__kairoWebhookStore = {
       seq: 0,
+      rev: 0,
       entries: [],
       secrets: envSecrets(),
       settings: { respondStatus: 200, respondDelayMs: 0 },
@@ -150,7 +155,32 @@ export function addSecret(label: unknown, value: unknown): PublicSecret {
   if (s.secrets.length >= 20) throw new WebhookInputError('Tối đa 20 secret — xoá bớt cái cũ.')
   const secret = makeSecret(typeof label === 'string' && label.trim() ? label : `secret-${s.secrets.length + 1}`, v)
   s.secrets.push(secret)
+  reverifyPending()
   return listSecrets().find((x) => x.id === secret.id)!
+}
+
+/**
+ * Webhook tới TRƯỚC khi dán secret (hoặc ký bằng secret chưa khai) được kiểm lại khi có secret mới —
+ * nhờ vậy biết ngay nó thuộc môi trường nào. Chữ ký tính trên byte thân gốc; `bodyText` là bản giải
+ * UTF-8 của đúng byte đó (Kairo gửi JSON UTF-8) nên mã hoá lại ra y nguyên. Thân bị cắt thì bỏ qua.
+ */
+function reverifyPending(): void {
+  const s = store()
+  let changed = false
+  for (const e of s.entries) {
+    if (e.bodyTruncated || (e.signature.status !== 'no-secret' && e.signature.status !== 'invalid')) continue
+    const next = verify(
+      e.headers['x-kairo-timestamp'] ?? null,
+      e.headers['x-kairo-signature'] ?? null,
+      Buffer.from(e.bodyText, 'utf8'),
+    )
+    if (next.status === 'valid') {
+      // Giữ độ lệch giờ lúc NHẬN, không tính lại theo giờ bây giờ.
+      e.signature = { ...next, skewSec: e.signature.skewSec, reverified: true }
+      changed = true
+    }
+  }
+  if (changed) s.rev++
 }
 
 export function removeSecret(id: string): boolean {
@@ -294,6 +324,7 @@ export function record(input: IncomingWebhook): WebhookEntry {
 export type LogPage = {
   entries: WebhookEntry[]
   lastSeq: number
+  rev: number
   total: number
   capacity: number
   startedAt: string
@@ -309,6 +340,7 @@ export function readLog(after: number): LogPage {
   return {
     entries: s.entries.filter((e) => e.seq > after),
     lastSeq: s.seq,
+    rev: s.rev,
     total: s.entries.length,
     capacity: MAX_ENTRIES,
     startedAt: s.startedAt,
@@ -322,6 +354,7 @@ export function clearLog(): void {
   const s = store()
   s.entries = []
   s.bySignature.clear()
+  s.rev++
 }
 
 // ───────────────────────── tự bắn thử ─────────────────────────

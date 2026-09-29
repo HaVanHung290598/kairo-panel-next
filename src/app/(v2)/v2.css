@@ -1146,3 +1146,46 @@ code {
     flex: 1 1 100%;
   }
 }
+/* nhãn môi trường = nhãn secret đã khớp (tối đa 4 màu, lặp lại theo thứ tự secret) */
+.wh-env {
+  display: inline-block;
+  max-width: 100%;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 1px 8px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+.wh-env-0 {
+  background: #e7efff;
+  color: #1d4fb8;
+  border-color: #c7d8fb;
+}
+.wh-env-1 {
+  background: #f3e8ff;
+  color: #6b2fb0;
+  border-color: #e0cbfa;
+}
+.wh-env-2 {
+  background: #e3f5ea;
+  color: #1a6b3c;
+  border-color: #c3e6d0;
+}
+.wh-env-3 {
+  background: #fff1e6;
+  color: #9a4a0b;
+  border-color: #f6d7bd;
+}
+.wh-env-none {
+  background: #f1f3f6;
+  color: var(--v2-muted);
+  font-weight: 600;
+}
+.wh-chip-env {
+  font-family: inherit;
+  padding: 3px 8px 3px 4px;
+}
