@@ -83,6 +83,37 @@ export async function fixedUser(): Promise<V2User> {
   return user
 }
 
+/**
+ * Header trang `/v2/panel-nguoi-dung` gắn vào MỌI lời gọi `/api/v2/*` khi người thử đã chọn user
+ * (`src/lib/v2/actAs.ts`). Không có header thì mọi route giữ nguyên hành vi cũ: user cố định của env.
+ */
+export const ACT_AS_HEADER = 'x-kpn-act-as'
+
+const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
+/** Email người thử chọn trên trang (đã giải mã, chữ thường), hoặc null nếu request không chọn ai. */
+export function actAsEmail(req: Request): string | null {
+  const raw = req.headers.get(ACT_AS_HEADER)
+  if (!raw) return null
+  let email: string
+  try {
+    email = decodeURIComponent(raw).trim().toLowerCase()
+  } catch {
+    throw new V2Error('Email người dùng đã chọn không hợp lệ.', 400)
+  }
+  if (!EMAIL.test(email) || email.length > 254) throw new V2Error('Email người dùng đã chọn không hợp lệ.', 400)
+  return email
+}
+
+/**
+ * Người "đang đăng nhập" của request: user đã chọn trên trang (header) nếu có, không thì user cố định
+ * của env. Người được chọn phải là thành viên ĐANG HOẠT ĐỘNG của tenant app-key (`requireUserByEmail`).
+ */
+export async function actingUser(req: Request): Promise<V2User> {
+  const email = actAsEmail(req)
+  return email ? requireUserByEmail(email) : fixedUser()
+}
+
 export type V2Token = { token: string; sessionId: string; expiresAt: string; userId: string }
 
 export async function mintToken(userId: string): Promise<V2Token> {

@@ -5,7 +5,7 @@ import {
   createBusiness,
   createDirect,
   createGroup,
-  fixedUser,
+  actingUser,
   invitationLink,
   listConversations,
   peerNames,
@@ -26,7 +26,7 @@ export const dynamic = 'force-dynamic'
  */
 export async function GET(req: Request) {
   return handle(async () => {
-    const me = await fixedUser()
+    const me = await actingUser(req)
     const conversations = await listConversations(me.userId)
     if (new URL(req.url).searchParams.get('names') !== '1') return { conversations }
     const names = await peerNames(me.userId, conversations)
@@ -55,7 +55,7 @@ type CreateBody = {
 export async function POST(req: Request) {
   return handle(async () => {
     const body = await readJson<CreateBody>(req)
-    const me = await fixedUser()
+    const me = await actingUser(req)
 
     if (body.kind === 'direct') {
       const peer = await requireUserByEmail(requireEmail(body.peerEmail, 'Email người nhận'))

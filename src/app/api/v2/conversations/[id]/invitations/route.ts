@@ -1,6 +1,6 @@
 import { kairoEnv } from '@/server/kairo'
 import { handle, readJson } from '@/server/route'
-import { V2Error, fixedUser, invitationLink, issueInvitations } from '@/server/v2'
+import { V2Error, actingUser, invitationLink, issueInvitations } from '@/server/v2'
 
 export const dynamic = 'force-dynamic'
 
@@ -15,7 +15,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     const count = Number.isInteger(body.invitationCount) ? Number(body.invitationCount) : 1
     if (count < 1 || count > 10) throw new V2Error('Số link mời đối tác phải từ 1 đến 10.', 400)
 
-    const me = await fixedUser()
+    const me = await actingUser(req)
     const issued = await issueInvitations(me.userId, id, count)
     const { enduserUrl } = kairoEnv()
     return {

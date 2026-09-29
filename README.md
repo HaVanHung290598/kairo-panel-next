@@ -51,6 +51,7 @@ server (Docker) runtime luôn là `server`, trình duyệt gọi thẳng URL tro
 | `/v2/panel` | v2 `/sdk/v2/kairo-widget.js` | `KairoConversationListV2` `split` (gói sẵn) hoặc `list` + `KairoPanelV2` (tự ghép); lọc loại; tạo 1-1 / nhóm / kênh nghiệp vụ + link mời đối tác |
 | `/v2/dang-ky` | — | người dùng tự tạo tài khoản (`POST /sdk/v2/users`), đăng nhập được ngay web-enduser |
 | `/v2/gara` | v2 | `KairoWidgetV2` khách vãng lai |
+| `/v2/panel-nguoi-dung` | v2 | như `/v2/panel` nhưng người "đang đăng nhập" chọn bằng email ngay trên trang, không đọc `DEMO_V2_USER_EMAIL` — xem mục dưới |
 | `/v2/webhook` | — | bàn NHẬN webhook (màn "SDK & Tích hợp → Đăng ký webhook" của web-tenant-admin) — xem mục dưới |
 
 Mỗi trang chỉ đọc global của bản mình (`src/kairo/loadBundle.ts`) — env trỏ bundle nào cũng
@@ -103,6 +104,21 @@ Hai kênh KHÁC nhau, đừng nhầm. `KairoPanel` cần token do server mint v�
 gắn mình vào cuối `<body>` trong Shadow DOM. Cả hai nằm chung một bundle
 `kairo-widget.js`, gắn `window.KairoPanel` và `window.KairoWidget` cùng lúc — nên
 `loadBundle.ts` chỉ chèn một thẻ script cho cả hai.
+
+## Panel theo người dùng — `/v2/panel-nguoi-dung`
+
+Nhập email một thành viên ĐANG HOẠT ĐỘNG của tenant app-key (tra bằng `POST /api/v2/users/lookup` →
+`/sdk/v2/users/resolve`) → trang đặt `setActAs(email)` (`src/lib/v2/actAs.ts`) và `request()` gắn
+header `x-kpn-act-as` vào mọi lời gọi `/api/v2/*`. Server đọc header ở `actingUser(req)`
+(`src/server/v2.ts`): config, token phiên, danh sách REST, tạo hội thoại, cấp link mời… đều nhân danh
+người đó. Không có header ⇒ mọi trang khác giữ nguyên user của env.
+
+- Người đang chọn nằm trên URL (`?as=`) — gửi link là mở đúng người; trình duyệt nhớ người vừa dùng +
+  8 người gần đây (localStorage). "Đổi người dùng" quên người đang dùng, vẫn giữ danh sách gần đây.
+- Đổi người = dựng lại `V2Provider` + vứt token cũ ⇒ panel mount lại, không lẫn phiên hai người.
+- Trang này KHÔNG có dock chat: iframe `/v2/dock` là document riêng, không biết user đã chọn.
+- Không có đăng nhập: ai mở được trang là xin được token phiên của bất kỳ thành viên nào trong tenant
+  app-key — đúng mục đích bàn thử, đừng đặt app-key tenant thật ở đây.
 
 ## Bàn nhận webhook — `/v2/webhook`
 

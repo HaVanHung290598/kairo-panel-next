@@ -14,6 +14,7 @@ import { useV2 } from '@/kairo/v2/context'
 const NAV = [
   { href: '/v2', label: 'Tổng quan' },
   { href: '/v2/panel', label: 'Panel nội bộ' },
+  { href: '/v2/panel-nguoi-dung', label: 'Panel theo người dùng' },
   { href: '/v2/dang-ky', label: 'Tự tạo tài khoản' },
   { href: '/v2/gara', label: 'Widget khách' },
   { href: '/v2/webhook', label: 'Webhook' },
@@ -47,6 +48,9 @@ export function V2Shell({ children }: { children: React.ReactNode }) {
               </span>
               <span className="v2-user" title={config.fixedUser.email}>
                 {config.fixedUser.displayName}
+              </span>
+              <span className="v2-user-src" data-acting={config.actingAs ? 'yes' : 'no'}>
+                {config.actingAs ? 'chọn tay' : 'từ env'}
               </span>
             </>
           )}

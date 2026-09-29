@@ -7,6 +7,8 @@
  * dẫn luôn tương đối, không cần base URL hay CORS.
  */
 
+import { ACT_AS_HEADER, getActAs } from './v2/actAs'
+
 export class ApiError extends Error {
   readonly status: number
 
@@ -32,10 +34,16 @@ export async function request<T>(path: string, init: RequestInit = {}): Promise<
     // no-store ở cả hai đầu: next.config.ts gắn header lên response để chặn proxy
     // trung gian, còn dòng này chặn chính HTTP cache của browser. Đặt trước ...init
     // nên vẫn ghi đè được nếu sau này có lời gọi thật sự muốn cache.
+    // Trang `/v2/panel-nguoi-dung` đã chọn user → mọi lời gọi v2 chạy dưới danh tính đó.
+    const actAs = path.startsWith('/api/v2/') ? getActAs() : null
     res = await fetch(path, {
       cache: 'no-store',
       ...init,
-      headers: { 'Content-Type': 'application/json', ...init.headers },
+      headers: {
+        'Content-Type': 'application/json',
+        ...(actAs ? { [ACT_AS_HEADER]: encodeURIComponent(actAs) } : {}),
+        ...init.headers,
+      },
     })
   } catch (err) {
     if (err instanceof DOMException && err.name === 'AbortError') throw err

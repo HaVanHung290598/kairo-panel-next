@@ -15,6 +15,20 @@ export type KairoConfigV2 = {
   /** Web-enduser cùng cụm; null = không in link. */
   enduserUrl: string | null
   fixedUser: { userId: string; email: string; displayName: string; roles: string[] }
+  /** true = `fixedUser` là user chọn tay ở `/v2/panel-nguoi-dung` (header `x-kpn-act-as`). */
+  actingAs?: boolean
+}
+
+export type LookedUpUser = { userId: string; email: string; displayName: string; roles: string[]; status: string }
+
+/** Tra một người trong tenant bằng email — lỗi 404/409 mang câu cho người (`ApiError.message`). */
+export async function lookupUser(email: string, signal?: AbortSignal): Promise<LookedUpUser> {
+  const body = await request<{ user: LookedUpUser }>('/api/v2/users/lookup', {
+    method: 'POST',
+    body: JSON.stringify({ email }),
+    signal,
+  })
+  return body.user
 }
 
 export function fetchConfigV2(signal: AbortSignal): Promise<KairoConfigV2> {

@@ -61,7 +61,11 @@ function writeUrl(layout: Layout, selected: string | null) {
   window.history.replaceState(null, '', `${window.location.pathname}?${q}`)
 }
 
-export function PanelWorkbench() {
+/**
+ * `allowDock=false`: không có dock chat. Trang `/v2/panel-nguoi-dung` tắt dock vì iframe `/v2/dock` là
+ * một document riêng, không biết user đã chọn trên trang cha — để bật là dock chạy dưới user của env.
+ */
+export function PanelWorkbench({ allowDock = true }: { allowDock?: boolean } = {}) {
   const { config, kairo } = useV2()
   const [layout, setLayout] = useState<Layout>('split')
   const [kinds, setKinds] = useState<KairoConversationKind[]>(KINDS.map((k) => k.value))
@@ -75,18 +79,18 @@ export function PanelWorkbench() {
     const u = readUrl()
     setLayout(u.layout)
     setSelected(u.selected)
-    setDock(readDockMode())
+    setDock(allowDock ? readDockMode() : 'off')
     setReady(true)
   }, [])
 
   useEffect(() => {
-    if (!ready) return
+    if (!ready || !allowDock) return
     try {
       window.localStorage.setItem(DOCK_KEY, dock)
     } catch {
       /* Không nhớ được thì lần sau dock mở mặc định. */
     }
-  }, [ready, dock])
+  }, [ready, allowDock, dock])
 
   useEffect(() => {
     if (ready) writeUrl(layout, selected)
@@ -178,14 +182,16 @@ export function PanelWorkbench() {
           ))}
         </fieldset>
 
-        <label className="v2-dock-toggle">
-          <input
-            type="checkbox"
-            checked={dock !== 'off'}
-            onChange={(e) => setDock(e.target.checked ? 'open' : 'off')}
-          />
-          Dock chat góc trái
-        </label>
+        {allowDock && (
+          <label className="v2-dock-toggle">
+            <input
+              type="checkbox"
+              checked={dock !== 'off'}
+              onChange={(e) => setDock(e.target.checked ? 'open' : 'off')}
+            />
+            Dock chat góc trái
+          </label>
+        )}
 
         <button type="button" className="v2-btn v2-btn-primary" onClick={() => setCreating(true)} disabled={!config}>
           ＋ Tạo hội thoại
@@ -225,7 +231,9 @@ export function PanelWorkbench() {
         <CreateConversation config={config} onClose={() => setCreating(false)} onCreated={selectFromOutside} />
       )}
 
-      {listReady && <ChatDock mode={dock} onModeChange={setDock} selected={selected} onSelect={selectFromOutside} />}
+      {listReady && allowDock && (
+        <ChatDock mode={dock} onModeChange={setDock} selected={selected} onSelect={selectFromOutside} />
+      )}
     </section>
   )
 }

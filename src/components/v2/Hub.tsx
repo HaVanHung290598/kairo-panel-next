@@ -73,6 +73,13 @@ export function Hub() {
             1-1, nhóm, kênh nghiệp vụ có link mời đối tác tenant khác.
           </p>
         </a>
+        <a className="v2-card v2-tile" href="/v2/panel-nguoi-dung">
+          <h2>Panel theo người dùng</h2>
+          <p>
+            Cùng panel nhúng như trên, nhưng tự chọn người &quot;đang đăng nhập&quot; bằng email ngay trên trang —
+            không phải sửa <code>DEMO_V2_USER_EMAIL</code> rồi khởi động lại service. Đổi người qua lại tức thì.
+          </p>
+        </a>
         <a className="v2-card v2-tile" href="/v2/dang-ky">
           <h2>Tự tạo tài khoản</h2>
           <p>

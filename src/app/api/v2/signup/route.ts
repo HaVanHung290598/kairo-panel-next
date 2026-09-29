@@ -1,6 +1,6 @@
 import { kairoEnv } from '@/server/kairo'
 import { handle, readJson, requireEmail, requireText } from '@/server/route'
-import { V2Error, createDirect, fixedUser, provisionUser } from '@/server/v2'
+import { V2Error, actingUser, createDirect, provisionUser } from '@/server/v2'
 
 export const dynamic = 'force-dynamic'
 // SDK có thể giữ request tới 120 giây rồi mới trả 202; route phải sống lâu hơn thế.
@@ -45,7 +45,7 @@ export async function POST(req: Request) {
     let direct: { conversationId: string | null; error: string | null } | null = null
     if (body.openDirect && outcome.user) {
       try {
-        const me = await fixedUser()
+        const me = await actingUser(req)
         if (me.userId !== outcome.user.userId) {
           const { conversationId } = await createDirect(me.userId, outcome.user.userId)
           direct = { conversationId, error: null }
